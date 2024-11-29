@@ -48,8 +48,8 @@ fun CameraX() {
         var frameCounter = 0L
         imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context)) { imageProxy ->
             frameCounter++
-            if (frameCounter % 5 == 0L) {
-                val frameData = compressFrame(imageProxy, 256, 144)
+            if (frameCounter % 3 == 0L) {
+                val frameData = compressFrame(imageProxy, 177, 100)
                 sendFrameToWear(context, frameData)
             }
             imageProxy.close()
@@ -57,6 +57,14 @@ fun CameraX() {
 
         cameraProvider.bindToLifecycle(lifecycleOwner, cameraxSelector, preview, imageAnalysis)
         preview.surfaceProvider = previewView.surfaceProvider
+
+        Wearable.getMessageClient(context).addListener {
+            Log.e("From Watch", "on Data")
+            if (it.path == "/remote") {
+                val remoteCommand = it.data.toString(Charsets.UTF_8)
+                Log.e("remote", "command: $remoteCommand")
+            }
+        }
     }
     AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
 }

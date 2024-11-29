@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.camandwear.presentation.composable.WearApp
+import com.example.camandwear.presentation.composable.component.JoystickDirection
 import com.google.android.gms.wearable.Wearable
 
 class MainActivityViewModel : ViewModel() {
@@ -16,6 +18,8 @@ class MainActivityViewModel : ViewModel() {
     fun setPreviewBitmap(bitmap: Bitmap?) {
         _previewBitmap.postValue(bitmap)
     }
+
+    private var lastRemoteCommand = JoystickDirection.Release
 
 
     fun addOnFrameCallback(context: Context) {
@@ -42,19 +46,19 @@ class MainActivityViewModel : ViewModel() {
      * other command: 4take photo 5record
      */
     fun sendDataToPhone(context: Context, command: String) {
-        Wearable.getMessageClient(context).apply {
-            Wearable.getNodeClient(context).connectedNodes.addOnSuccessListener {
-                for (node in it) {
-                    sendMessage(node.id, "/remote", command.toByteArray()).addOnSuccessListener {
+        Wearable.getNodeClient(context).connectedNodes.addOnSuccessListener {
+            for (node in it) {
+                Wearable.getMessageClient(context)
+                    .sendMessage(node.id, "/remote", command.toByteArray(Charsets.UTF_8))
+                    .addOnSuccessListener {
                         Log.e("sendDataToPhone", "/remote: $command + ${command.toByteArray()} ")
                     }
-                }
             }
         }
     }
 
 
-    fun decodeJpegToBitmap(jpegData: ByteArray): Bitmap? {
+    private fun decodeJpegToBitmap(jpegData: ByteArray): Bitmap? {
         return try {
             // 将 JPEG 数据解码为 Bitmap
             BitmapFactory.decodeByteArray(jpegData, 0, jpegData.size)
@@ -64,4 +68,35 @@ class MainActivityViewModel : ViewModel() {
         }
     }
 
+    fun parseJoystickData(context: Context, direction: JoystickDirection) {
+        if (direction == lastRemoteCommand) {
+            return
+        }
+        when (direction) {
+            JoystickDirection.Up -> {
+                lastRemoteCommand = JoystickDirection.Up
+                sendDataToPhone(context, "00")
+            }
+
+            JoystickDirection.Down -> {
+                lastRemoteCommand = JoystickDirection.Down
+                sendDataToPhone(context, "33")
+            }
+
+            JoystickDirection.Left -> {
+                lastRemoteCommand = JoystickDirection.Left
+                sendDataToPhone(context, "11")
+            }
+
+            JoystickDirection.Right -> {
+                lastRemoteCommand = JoystickDirection.Right
+                sendDataToPhone(context, "22")
+            }
+
+            JoystickDirection.Release -> {
+                lastRemoteCommand = JoystickDirection.Release
+                sendDataToPhone(context, "44")
+            }
+        }
+    }
 }
